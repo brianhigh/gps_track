@@ -6,6 +6,7 @@ output:
   html_document:
     fig_caption: no
     keep_md: yes
+  pdf_document: default
 ---
 
 This is one way to plot a track from a GPS file (GPX, TCX, etc.) file using 
