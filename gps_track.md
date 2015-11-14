@@ -58,28 +58,79 @@ gps <- read.csv('mywalk.csv', header = TRUE)
 
 ## Get the Base Map
 
+### Zoom Level
+
+First we need to find an appropriate zoom level or scale. The zoom level 
+(as defined by Google) could be determined by trial-and-error, knowing 
+the range should be between 3 (continent) and 21 (building) with 10 
+suggested for a "city" zoom level.
+
+
+```r
+zoomlevel <- 15
+```
+
+That would give us a map that was roughly twice as wide as our route area.
+
+However, we will calculate this level from an algorithm found 
+[online](http://stackoverflow.com/questions/6048975). This will allow us 
+to "autoscale" our map, regardless of the size of the GPS track area we 
+are using.
+
+
+```r
+GLOBE_WIDTH = 256
+west <- min(gps$Longitude)
+east <- max(gps$Longitude)
+angle <- east - west
+north <- max(gps$Latitude)
+south <- min(gps$Latitude)
+delta <- 0
+
+angle2 <- north - south
+if (angle2 > angle) {
+    angle <- angle2
+    delta <- 3
+}
+
+if (angle < 0) {
+    angle <- angle + 360
+}
+
+zoomlevel <- ceiling(log(960 * 360 / angle / GLOBE_WIDTH) / log(2)) - 2 - delta;
+zoomlevel
+```
+
+```
+## [1] 15
+```
+
+This is the same zoom level we had discovered earlier by trial-and-error.
+
 ### Calculate Route Location and Size
 
-To get the right base map, we need to perform some calculations. We want to 
-know the center coordinates and the width and height of the route.
+To get the right base map location, we need to perform some more calculations. 
+We want to know the center coordinates and the width and height of the route.
 
 
 ```r
 centerLon <- median(gps$Longitude)
 centerLat <- median(gps$Latitude)
-routeWidth <- 2 * abs(max(gps$Longitude) - min(gps$Longitude))
-routeHeight <- 2 * abs(max(gps$Latitude) - min(gps$Latitude))
+routeWidth <- 2 * abs(east - west)
+routeHeight <- 2 * abs(north - south)
 ```
+
+The first two variables will be used to get the Google base map. All four 
+of these variables will be used to get the OpenStreetMap base map.
 
 ### Google Map
 
-We can get our base map from [Google](https://www.google.com/maps). The zoom 
-level was determined by trial-and-error, knowing the range should be between
-3 (continent) and 21 (building) with 10 suggested for a "city" zoom level.
+Now we can get the base map using this zoomlevel, location, and size.
+
+We can get our base map from [Google](https://www.google.com/maps). 
 
 
 ```r
-zoomlevel <- 15
 googleMapImageData <- get_googlemap(
     center = c(lon = centerLon, lat = centerLat), 
     zoom = zoomlevel, maptype = c("terrain")
@@ -88,10 +139,12 @@ googleMapImageData <- get_googlemap(
 
 ### OpenStreetMap
 
-Or we can use a base map from [OpenStreetMap](https://www.openstreetmap.org/). 
+We can also use a base map from 
+[OpenStreetMap](https://www.openstreetmap.org/). 
+
 The value we chose for scale approximates the zoom chosen for the Google Map
 and was based on a [formula](http://gis.stackexchange.com/questions/7430) 
-found online for converting zoom level to map scale. 
+found online for converting the Google zoom level to map scale. 
 
 
 ```r
@@ -117,7 +170,7 @@ ggmap(googleMapImageData, extent = "device") +
                colour = "red", size = 1, pch = 20)
 ```
 
-![](./gps_track_files/figure-html/unnamed-chunk-8-1.png) 
+![](gps_track_files/figure-html/unnamed-chunk-10-1.png) 
 
 ### OpenStreetMap
 
@@ -130,4 +183,4 @@ ggmap(openStreetMapImageData, extent = "device") +
                colour = "red", size = 1, pch = 20)
 ```
 
-![](./gps_track_files/figure-html/unnamed-chunk-9-1.png) 
+![](gps_track_files/figure-html/unnamed-chunk-11-1.png) 
