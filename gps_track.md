@@ -116,8 +116,8 @@ We want to know the center coordinates and the width and height of the route.
 ```r
 centerLon <- median(gps$Longitude)
 centerLat <- median(gps$Latitude)
-routeWidth <- 2 * abs(east - west)
-routeHeight <- 2 * abs(north - south)
+routeWidth <- abs(east - west)
+routeHeight <- abs(north - south)
 ```
 
 The first two variables will be used to get the Google base map. All four 
@@ -149,10 +149,10 @@ found online for converting the Google zoom level to map scale.
 
 ```r
 openStreetMapImageData <- get_openstreetmap(
-    bbox = c(lowerleftlon=centerLon-routeWidth/2, 
-             lowerleftlat=centerLat-routeHeight/2, 
-             upperrightlon=centerLon+routeWidth/2, 
-             upperrightlat=centerLat+routeHeight/2),
+    bbox = c(lowerleftlon=centerLon-routeWidth, 
+             lowerleftlat=centerLat-routeHeight, 
+             upperrightlon=centerLon+routeWidth, 
+             upperrightlat=centerLat+routeHeight),
     scale = floor(591657550.5 / 2^(zoomlevel - 1) / 2)
     )
 ```

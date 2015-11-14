@@ -130,8 +130,8 @@ zoomlevel</code></pre>
 <p>To get the right base map location, we need to perform some more calculations. We want to know the center coordinates and the width and height of the route.</p>
 <pre class="r"><code>centerLon &lt;- median(gps$Longitude)
 centerLat &lt;- median(gps$Latitude)
-routeWidth &lt;- 2 * abs(east - west)
-routeHeight &lt;- 2 * abs(north - south)</code></pre>
+routeWidth &lt;- abs(east - west)
+routeHeight &lt;- abs(north - south)</code></pre>
 <p>The first two variables will be used to get the Google base map. All four of these variables will be used to get the OpenStreetMap base map.</p>
 </div>
 <div id="google-map" class="section level3">
@@ -148,10 +148,10 @@ routeHeight &lt;- 2 * abs(north - south)</code></pre>
 <p>We can also use a base map from <a href="https://www.openstreetmap.org/">OpenStreetMap</a>.</p>
 <p>The value we chose for scale approximates the zoom chosen for the Google Map and was based on a <a href="http://gis.stackexchange.com/questions/7430">formula</a> found online for converting the Google zoom level to map scale.</p>
 <pre class="r"><code>openStreetMapImageData &lt;- get_openstreetmap(
-    bbox = c(lowerleftlon=centerLon-routeWidth/2, 
-             lowerleftlat=centerLat-routeHeight/2, 
-             upperrightlon=centerLon+routeWidth/2, 
-             upperrightlat=centerLat+routeHeight/2),
+    bbox = c(lowerleftlon=centerLon-routeWidth, 
+             lowerleftlat=centerLat-routeHeight, 
+             upperrightlon=centerLon+routeWidth, 
+             upperrightlat=centerLat+routeHeight),
     scale = floor(591657550.5 / 2^(zoomlevel - 1) / 2)
     )</code></pre>
 </div>
