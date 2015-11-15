@@ -1,14 +1,21 @@
 # GPS Track Demo
 Brian High  
-11/12/2015  
+11/13/2015  
 
-This is one way to plot a track from a GPS file (GPX, TCX, etc.) file using 
-R and `ggmap`. 
+We will plot tracks from GPS files (GPX, TCX, etc.) using R and `ggmap`. 
+Specifically, we will use the `get_map()` "smart function" to get the base 
+map. While `get_map()` includes a zoom='auto' feature, we will develop our 
+own function for determine an appropriate zoom level.
 
-Based on: 
-[Mapping GPS Tracks in R](http://www.r-bloggers.com/mapping-gps-tracks-in-r/) 
-by Shawn Mollie Taylor. Here is the 
-[Gist](https://gist.github.com/mollietaylor/4210660).
+See: [get_map {ggmap}](http://www.inside-r.org/packages/cran/ggmap/docs/get_map) for more information about the features of this function.
+
+## User-defined Functions for Code Reuse
+
+As a practical example of user-defined functions, we will make several maps 
+using GPS tracks. We will create several functions to reuse code which will 
+perform important calculations allowing us to choose the approproate base map
+location and zoom level. We will repeat the process for several GPS tracks 
+for both Google and OpenStreetMap (OSM) base maps.
 
 ## Set Options
 
@@ -61,13 +68,13 @@ gps <- read.csv('mywalk.csv', header = TRUE)
 ### Zoom Level
 
 First we need to find an appropriate zoom level or scale. The zoom level 
-(as defined by Google) could be determined by trial-and-error, knowing 
-the range should be between 3 (continent) and 21 (building) with 10 
+(as defined by [Google](https://developers.google.com/maps/documentation/static-maps/intro?hl=en#Zoomlevels)) could be determined by trial-and-error, knowing 
+the range should be between 0 (whole world) and 21 (building) with 10 
 suggested for a "city" zoom level.
 
 
 ```r
-zoomlevel <- 15
+zoomLevel <- 14
 ```
 
 That would give us a map that was roughly twice as wide as our route area.
@@ -75,34 +82,34 @@ That would give us a map that was roughly twice as wide as our route area.
 However, we will calculate this level from an algorithm found 
 [online](http://stackoverflow.com/questions/6048975). This will allow us 
 to "autoscale" our map, regardless of the size of the GPS track area we 
-are using.
+are using. Let's also make this calculation into a function so we can reuse it.
 
 
 ```r
-GLOBE_WIDTH = 256
-west <- min(gps$Longitude)
-east <- max(gps$Longitude)
-angle <- east - west
-north <- max(gps$Latitude)
-south <- min(gps$Latitude)
-delta <- 0
-
-angle2 <- north - south
-if (angle2 > angle) {
-    angle <- angle2
-    delta <- 3
+autoZoom <- function(lon, lat) {
+    globeWidth <- 256
+    west <- min(lon)
+    east <- max(lon)
+    north <- max(lat)
+    south <- min(lat)
+    
+    angle <- east - west
+    angle2 <- north - south
+    
+    if (angle2 > angle) angle <- angle2
+    if (angle < 0) angle <- angle + 360
+    
+    zoom <- floor(log(960 * 360 / angle / globeWidth) / log(2)) - 2
+    return(zoom)
 }
 
-if (angle < 0) {
-    angle <- angle + 360
-}
+zoomLevel <- autoZoom(gps$Longitude, gps$Latitude)
 
-zoomlevel <- ceiling(log(960 * 360 / angle / GLOBE_WIDTH) / log(2)) - 2 - delta;
-zoomlevel
+zoomLevel
 ```
 
 ```
-## [1] 15
+## [1] 14
 ```
 
 This is the same zoom level we had discovered earlier by trial-and-error.
@@ -110,67 +117,67 @@ This is the same zoom level we had discovered earlier by trial-and-error.
 ### Calculate Route Location and Size
 
 To get the right base map location, we need to perform some more calculations. 
-We want to know the center coordinates and the width and height of the route.
+We want to know the center coordinates of the GPS track. We will create a 
+one-line function to calculate the center point of the GPS track and map.
 
 
 ```r
-centerLon <- median(gps$Longitude)
-centerLat <- median(gps$Latitude)
-routeWidth <- abs(east - west)
-routeHeight <- abs(north - south)
-```
+getCenter <- function(lat, lon) c(lon = median(lon), lat = median(lat))
 
-The first two variables will be used to get the Google base map. All four 
-of these variables will be used to get the OpenStreetMap base map.
+centerLocation <- getCenter(gps$Latitude, gps$Longitude)
+```
 
 ### Google Map
 
-Now we can get the base map using this zoomlevel, location, and size.
+Now we can get the base map using this zoomLevel and center location. 
+We will make another new function for this procedure.
 
 We can get our base map from [Google](https://www.google.com/maps). 
 
 
 ```r
-googleMapImageData <- get_googlemap(
-    center = c(lon = centerLon, lat = centerLat), 
-    zoom = zoomlevel, maptype = c("terrain")
-    )
+fetchMap <- function(loc, src, zoom) {
+    map <- get_map(location=loc, 
+                   source=src, 
+                   color='color', 
+                   maptype='terrain', 
+                   zoom=zoom)
+    return(map)
+}
+
+googleMapImageData <- fetchMap(centerLocation, 'google', zoomLevel)
 ```
 
 ### OpenStreetMap
 
 We can also use a base map from 
-[OpenStreetMap](https://www.openstreetmap.org/). 
-
-The value we chose for scale approximates the zoom chosen for the Google Map
-and was based on a [formula](http://gis.stackexchange.com/questions/7430) 
-found online for converting the Google zoom level to map scale. 
+[OpenStreetMap](https://www.openstreetmap.org/), using the function we just
+defined. 
 
 
 ```r
-openStreetMapImageData <- get_openstreetmap(
-    bbox = c(lowerleftlon=centerLon-routeWidth, 
-             lowerleftlat=centerLat-routeHeight, 
-             upperrightlon=centerLon+routeWidth, 
-             upperrightlat=centerLat+routeHeight),
-    scale = floor(591657550.5 / 2^(zoomlevel - 1) / 2)
-    )
+openStreetMapImageData <- fetchMap(centerLocation, 'osm', zoomLevel)
 ```
 
 ## Plot the Track on the Map
 
 ### Google Map
 
-Here is the GPS track plotted over a Google base map.
+Here is the GPS track plotted over a Google base map, using a function we
+define.
 
 
 ```r
-ggmap(googleMapImageData, extent = "device") + 
-    geom_point(aes(x = Longitude, y = Latitude), data = gps,
+makeMap <- function(dat) {
+    ggmap(dat, extent = "device") + 
+    geom_point(aes(x = Longitude, y = Latitude), data = gps, 
                colour = "red", size = 1, pch = 20)
+}
+
+makeMap(googleMapImageData)
 ```
 
-![](gps_track_files/figure-html/unnamed-chunk-10-1.png) 
+![](./gps_track_files/figure-html/unnamed-chunk-10-1.png) 
 
 ### OpenStreetMap
 
@@ -178,9 +185,78 @@ And here is the same GPS track plotted on an OpenStreetMap.
 
 
 ```r
-ggmap(openStreetMapImageData, extent = "device") + 
-    geom_point(aes(x = Longitude, y = Latitude), data = gps,
-               colour = "red", size = 1, pch = 20)
+makeMap(openStreetMapImageData)
 ```
 
-![](gps_track_files/figure-html/unnamed-chunk-11-1.png) 
+![](./gps_track_files/figure-html/unnamed-chunk-11-1.png) 
+
+## Plot Another Track
+
+We will check our zoom and scale settings with a different track. This one,
+instead of being square, is longer than it is wide.
+
+
+```bash
+gpsbabel -t -i gtrnctr -f myride.tcx -o unicsv -F myride.csv
+```
+
+After converting `myride.tcx` to `myride.csv`, we can import into R and 
+calculate the zoom level and center location.
+
+
+```r
+gps <- read.csv('myride.csv', header = TRUE)
+zoomLevel <- autoZoom(gps$Longitude, gps$Latitude)
+centerLocation <- getCenter(gps$Latitude, gps$Longitude)
+```
+
+Now we can fetch the base maps.
+
+
+```r
+googleMapImageData <- fetchMap(centerLocation, 'google', zoomLevel)
+openStreetMapImageData <- fetchMap(centerLocation, 'osm', zoomLevel)
+```
+
+And then make the maps.
+
+
+```r
+makeMap(googleMapImageData)
+```
+
+![](./gps_track_files/figure-html/unnamed-chunk-15-1.png) 
+
+```r
+makeMap(openStreetMapImageData)
+```
+
+![](./gps_track_files/figure-html/unnamed-chunk-15-2.png) 
+
+## Plot a Third Track
+
+As a final check that our `autoZoom()` function is working as we would like, 
+let's plot a track that is wider than it is long.
+
+
+```bash
+gpsbabel -t -i gtrnctr -f myferryride.tcx -o unicsv -F myferryride.csv
+```
+
+After converting `myferryride.tcx` to `myferryride.csv`, we can make the maps. 
+
+
+```r
+gps <- read.csv('myferryride.csv', header = TRUE)
+zoomLevel <- autoZoom(gps$Longitude, gps$Latitude)
+centerLocation <- getCenter(gps$Latitude, gps$Longitude)
+makeMap(fetchMap(centerLocation, 'google', zoomLevel))
+```
+
+![](./gps_track_files/figure-html/unnamed-chunk-17-1.png) 
+
+```r
+makeMap(fetchMap(centerLocation, 'osm', zoomLevel))
+```
+
+![](./gps_track_files/figure-html/unnamed-chunk-17-2.png) 
