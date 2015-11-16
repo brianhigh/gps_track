@@ -12,9 +12,9 @@ output:
 We will plot tracks from GPS files (GPX, TCX, etc.) using R and `ggmap`. 
 Specifically, we will use the `get_map()` "smart function" to get the base 
 map. While `get_map()` includes a zoom='auto' feature, we will develop our 
-own function for determine an appropriate zoom level.
+own function for determining an appropriate zoom level.
 
-See: [get_map {ggmap}](http://www.inside-r.org/packages/cran/ggmap/docs/get_map) for more information about the features of this function.
+See: [get_map {ggmap}](http://www.inside-r.org/packages/cran/ggmap/docs/get_map) for more information about the features of the `get_map()` function.
 
 ## User-defined Functions for Code Reuse
 
@@ -83,7 +83,7 @@ That would give us a map that was roughly twice as wide as our route area.
 
 However, we will calculate this level from an algorithm found 
 [online](http://stackoverflow.com/questions/6048975). This will allow us 
-to "autoscale" our map, regardless of the size of the GPS track area we 
+to "autozoom" our map, regardless of the size of the GPS track area we 
 are using. Let's also make this calculation into a function so we can reuse it.
 
 ```{r}
@@ -130,13 +130,23 @@ We will make another new function for this procedure.
 
 We can get our base map from [Google](https://www.google.com/maps). 
 
+Let's make a function to automatically calculate the map 
+[scale](http://wiki.openstreetmap.org/wiki/MinScaleDenominator) then 
+execute the `get_map()` function.
+ 
+
 ```{r}
 fetchMap <- function(loc, src, zoom) {
+    # Calculate scale for 'osm' maps, otherwise use 1 for Google maps.
+    # We need this or else many 'osm' map labels will be too small to read.
+    scale <- ifelse(src == 'osm', floor(591657550.5 / 2^(zoom - 1) / 1.5), 1)
+    
     map <- get_map(location=loc, 
                    source=src, 
                    color='color', 
-                   maptype='terrain', 
-                   zoom=zoom)
+                   maptype='roadmap', 
+                   zoom=zoom,
+                   scale=scale)
     return(map)
 }
 
