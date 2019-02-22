@@ -1,6 +1,13 @@
-# GPS Track Demo
-Brian High  
-11/13/2015  
+---
+title: "GPS Track Demo"
+author: "Brian High"
+date: "11/13/2015"
+output:
+  html_document:
+    fig_caption: no
+    keep_md: yes
+  pdf_document: default
+---
 
 We will plot tracks from GPS files (GPX, TCX, etc.) using R and `ggmap`. 
 Specifically, we will use the `get_map()` "smart function" to get the base 
@@ -15,7 +22,7 @@ As a practical example of user-defined functions, we will make several maps
 using GPS tracks. We will create several functions to reuse code which will 
 perform important calculations allowing us to choose the approproate base map
 location and zoom level. We will repeat the process for several GPS tracks 
-for both Google and OpenStreetMap (OSM) base maps.
+on Google base maps.
 
 ## Set Options
 
@@ -140,6 +147,8 @@ execute the `get_map()` function.
  
 
 
+
+
 ```r
 fetchMap <- function(loc, src, zoom) {
     # Calculate scale for 'osm' maps, otherwise use 1 for Google maps.
@@ -156,17 +165,6 @@ fetchMap <- function(loc, src, zoom) {
 }
 
 googleMapImageData <- fetchMap(centerLocation, 'google', zoomLevel)
-```
-
-### OpenStreetMap
-
-We can also use a base map from 
-[OpenStreetMap](https://www.openstreetmap.org/), using the function we just
-defined. 
-
-
-```r
-openStreetMapImageData <- fetchMap(centerLocation, 'osm', zoomLevel)
 ```
 
 ## Plot the Track on the Map
@@ -187,18 +185,7 @@ makeMap <- function(dat) {
 makeMap(googleMapImageData)
 ```
 
-![](./gps_track_files/figure-html/unnamed-chunk-10-1.png) 
-
-### OpenStreetMap
-
-And here is the same GPS track plotted on an OpenStreetMap.
-
-
-```r
-makeMap(openStreetMapImageData)
-```
-
-![](./gps_track_files/figure-html/unnamed-chunk-11-1.png) 
+![](gps_track_files/figure-html/bike_ride-1.png)
 
 ## Plot Another Track
 
@@ -220,28 +207,21 @@ zoomLevel <- autoZoom(gps$Longitude, gps$Latitude)
 centerLocation <- getCenter(gps$Latitude, gps$Longitude)
 ```
 
-Now we can fetch the base maps.
+Now we can fetch the base map.
 
 
 ```r
 googleMapImageData <- fetchMap(centerLocation, 'google', zoomLevel)
-openStreetMapImageData <- fetchMap(centerLocation, 'osm', zoomLevel)
 ```
 
-And then make the maps.
+And then make the map.
 
 
 ```r
 makeMap(googleMapImageData)
 ```
 
-![](./gps_track_files/figure-html/unnamed-chunk-15-1.png) 
-
-```r
-makeMap(openStreetMapImageData)
-```
-
-![](./gps_track_files/figure-html/unnamed-chunk-15-2.png) 
+![](gps_track_files/figure-html/bus_ride-1.png)
 
 ## Plot a Third Track
 
@@ -263,10 +243,4 @@ centerLocation <- getCenter(gps$Latitude, gps$Longitude)
 makeMap(fetchMap(centerLocation, 'google', zoomLevel))
 ```
 
-![](./gps_track_files/figure-html/unnamed-chunk-17-1.png) 
-
-```r
-makeMap(fetchMap(centerLocation, 'osm', zoomLevel))
-```
-
-![](./gps_track_files/figure-html/unnamed-chunk-17-2.png) 
+![](gps_track_files/figure-html/ferry_ride-1.png)
